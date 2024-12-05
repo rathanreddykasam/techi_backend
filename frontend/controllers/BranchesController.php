@@ -5,7 +5,7 @@ namespace frontend\controllers;
 use common\models\Branches;
 use yii\rest\ActiveController;
 
-class UserPostsController extends ActiveController
+class BranchesController extends ActiveController
 {
     public $modelClass = Branches::class;
 

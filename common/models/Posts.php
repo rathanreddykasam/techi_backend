@@ -2,13 +2,14 @@
 
 namespace common\models;
 
+use common\behaviors\ExplicitSaveBehavior;
+
 use Yii;
 
 /**
- * This is the model class for table "{{%user_posts}}".
+ * This is the model class for table "user_posts".
  *
  * @property int $id
- * @property int $post_id
  * @property int $user_id
  * @property int $branch_id
  * @property int $category_id
@@ -31,19 +32,49 @@ use Yii;
  *
  * @property Branches $branch
  * @property Category $category
+ * @property PostComments[] $postComments
  * @property PostEditor[] $postEditors
  * @property TeamImages[] $teamImages
  * @property User $user
  */
-class UserPosts extends \yii\rest\ActiveRecord
+class Posts extends \yii\db\ActiveRecord
 {
+    public $bannerFile; // Temporary attribute for banner file upload
+    public $logoFile;
     /**
      * {@inheritdoc}
      */
     public static function tableName()
     {
-        return '{{%user_posts}}';
+        return 'user_posts';
     }
+
+
+    public function fields()
+    {
+        // If this is an individual view (e.g., /posts/123), return all attributes
+        if (Yii::$app->controller->action->id === 'view') {
+            $fields = parent::fields();
+
+            $fields['bannerUrl'] = 'bannerUrl';
+            $fields['logoUrl'] = 'logoUrl';
+
+            return $fields; // Return all fields
+        }
+
+        // For index (e.g., /posts), return only specific fields
+        return ['id', 'user_id', 'Intro', 'logo', 'banner', 'bannerUrl', 'logoUrl', 'heading', 'tagline'];
+    }
+
+    public function behaviors()
+    {
+        return [
+            'explicitSave' => [
+                'class' => ExplicitSaveBehavior::class,
+            ],
+        ];
+    }
+
 
     /**
      * {@inheritdoc}
@@ -51,15 +82,16 @@ class UserPosts extends \yii\rest\ActiveRecord
     public function rules()
     {
         return [
-            [['post_id', 'user_id', 'branch_id', 'category_id', 'heading', 'banner', 'logo', 'tagline', 'Intro', 'story', 'site_link', 'video', 'video_key', 'team_size', 'some_text', 'status', 'created_by', 'post_as'], 'required'],
-            [['post_id', 'user_id', 'branch_id', 'category_id', 'video_key', 'team_size', 'status', 'created_by', 'post_as'], 'integer'],
+            [['user_id', 'branch_id', 'category_id', 'heading', 'tagline', 'Intro', 'story', 'team_size', 'status', 'post_as'], 'required'],
+            [['user_id', 'branch_id', 'category_id', 'video_key', 'team_size', 'status', 'created_by', 'post_as'], 'integer'],
             [['Intro', 'story', 'some_text'], 'string'],
             [['created_on', 'posted_on'], 'safe'],
             [['heading'], 'string', 'max' => 50],
             [['banner', 'logo'], 'string', 'max' => 101],
+            [['banner', 'logo'], 'string', 'max' => 101], // Ensure these are strings in DB
+            [['bannerFile', 'logoFile'], 'file', 'skipOnEmpty' => true, 'extensions' => 'jpg, jpeg, png'],
             [['tagline', 'site_link'], 'string', 'max' => 100],
             [['video'], 'string', 'max' => 150],
-            [['post_id'], 'unique'],
             [['category_id'], 'exist', 'skipOnError' => true, 'targetClass' => Category::class, 'targetAttribute' => ['category_id' => 'id']],
             [['user_id'], 'exist', 'skipOnError' => true, 'targetClass' => User::class, 'targetAttribute' => ['user_id' => 'id']],
             [['branch_id'], 'exist', 'skipOnError' => true, 'targetClass' => Branches::class, 'targetAttribute' => ['branch_id' => 'id']],
@@ -73,7 +105,6 @@ class UserPosts extends \yii\rest\ActiveRecord
     {
         return [
             'id' => 'ID',
-            'post_id' => 'Post ID',
             'user_id' => 'User ID',
             'branch_id' => 'Branch ID',
             'category_id' => 'Category ID',
@@ -97,9 +128,35 @@ class UserPosts extends \yii\rest\ActiveRecord
     }
 
     /**
+     * Get the full URL for the banner image.
+     * 
+     * @return string|null
+     */
+    public function getBannerUrl()
+    {
+        if ($this->banner) {
+            return Yii::$app->request->hostInfo . Yii::getAlias('@web') . '/images/' . $this->banner;
+        }
+        return null; // Return null if no banner exists
+    }
+
+    /**
+     * Get the full URL for the logo image.
+     * 
+     * @return string|null
+     */
+    public function getLogoUrl()
+    {
+        if ($this->logo) {
+            return Yii::$app->request->hostInfo . Yii::getAlias('@web') . '/images/' . $this->logo;
+        }
+        return null; // Return null if no logo exists
+    }
+
+    /**
      * Gets query for [[Branch]].
      *
-     * @return \yii\db\ActiveQuery|\common\models\query\BranchesQuery
+     * @return \yii\db\ActiveQuery
      */
     public function getBranch()
     {
@@ -109,7 +166,7 @@ class UserPosts extends \yii\rest\ActiveRecord
     /**
      * Gets query for [[Category]].
      *
-     * @return \yii\db\ActiveQuery|\common\models\query\CategoryQuery
+     * @return \yii\db\ActiveQuery
      */
     public function getCategory()
     {
@@ -117,9 +174,19 @@ class UserPosts extends \yii\rest\ActiveRecord
     }
 
     /**
+     * Gets query for [[PostComments]].
+     *
+     * @return \yii\db\ActiveQuery
+     */
+    public function getPostComments()
+    {
+        return $this->hasMany(PostComments::class, ['post_id' => 'id']);
+    }
+
+    /**
      * Gets query for [[PostEditors]].
      *
-     * @return \yii\db\ActiveQuery|\common\models\query\PostEditorQuery
+     * @return \yii\db\ActiveQuery
      */
     public function getPostEditors()
     {
@@ -129,7 +196,7 @@ class UserPosts extends \yii\rest\ActiveRecord
     /**
      * Gets query for [[TeamImages]].
      *
-     * @return \yii\db\ActiveQuery|\common\models\query\TeamImagesQuery
+     * @return \yii\db\ActiveQuery
      */
     public function getTeamImages()
     {
@@ -139,19 +206,30 @@ class UserPosts extends \yii\rest\ActiveRecord
     /**
      * Gets query for [[User]].
      *
-     * @return \yii\db\ActiveQuery|\common\models\query\UserQuery
+     * @return \yii\db\ActiveQuery
      */
     public function getUser()
     {
         return $this->hasOne(User::class, ['id' => 'user_id']);
     }
 
-    /**
-     * {@inheritdoc}
-     * @return \common\models\query\UserPostsQuery the active query used by this AR class.
-     */
     public static function find()
     {
-        return new \common\models\query\UserPostsQuery(get_called_class());
+        return new \common\models\query\PostsQuery(get_called_class());
+    }
+
+    /**
+     * Override save to enable the save operation explicitly.
+     *
+     * @param bool $runValidation
+     * @param array|null $attributeNames
+     * @return bool
+     */
+    public function save($runValidation = true, $attributeNames = null)
+    {
+        $this->getBehavior('explicitSave')->allowSave(); // Allow saving explicitly
+        $result = parent::save($runValidation, $attributeNames);
+        $this->getBehavior('explicitSave')->afterSave(null); // Reset after save
+        return $result;
     }
 }

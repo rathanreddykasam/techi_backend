@@ -69,7 +69,7 @@ class Branches extends \yii\db\ActiveRecord
      */
     public function getUserPosts()
     {
-        return $this->hasMany(UserPosts::class, ['branch_id' => 'id']);
+        return $this->hasMany(Posts::class, ['branch_id' => 'id']);
     }
 
     /**

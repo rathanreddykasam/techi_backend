@@ -7,7 +7,7 @@ namespace common\models\query;
  *
  * @see \common\models\UserPosts
  */
-class UserPostsQuery extends \yii\db\ActiveQuery
+class PostsQuery extends \yii\db\ActiveQuery
 {
     /*public function active()
     {
@@ -16,7 +16,7 @@ class UserPostsQuery extends \yii\db\ActiveQuery
 
     /**
      * {@inheritdoc}
-     * @return \common\models\UserPosts[]|array
+     * @return \common\models\Posts[]|array
      */
     public function all($db = null)
     {
@@ -25,7 +25,7 @@ class UserPostsQuery extends \yii\db\ActiveQuery
 
     /**
      * {@inheritdoc}
-     * @return \common\models\UserPosts|array|null
+     * @return \common\models\Posts|array|null
      */
     public function one($db = null)
     {

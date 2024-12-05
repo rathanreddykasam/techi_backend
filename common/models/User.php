@@ -3,7 +3,6 @@
 namespace common\models;
 
 use Yii;
-use yii\base\NotSupportedException;
 use yii\behaviors\TimestampBehavior;
 use yii\db\ActiveRecord;
 use yii\web\IdentityInterface;
@@ -20,6 +19,7 @@ use yii\web\IdentityInterface;
  * @property string $email
  * @property string $password
  * @property string $auth_key
+ * @property string $access_token
  * @property string $password_hash
  * @property string $password_reset_token
  * @property string $verification_token
@@ -43,6 +43,8 @@ class User extends ActiveRecord implements IdentityInterface
         return '{{%user}}';
     }
 
+
+
     /**
      * {@inheritdoc}
      */
@@ -59,7 +61,7 @@ class User extends ActiveRecord implements IdentityInterface
     public function rules()
     {
         return [
-            ['status', 'default', 'value' => self::STATUS_INACTIVE],
+            ['status', 'default', 'value' => self::STATUS_ACTIVE],
             ['status', 'in', 'range' => [self::STATUS_ACTIVE, self::STATUS_INACTIVE, self::STATUS_DELETED]],
         ];
     }
@@ -77,7 +79,7 @@ class User extends ActiveRecord implements IdentityInterface
      */
     public static function findIdentityByAccessToken($token, $type = null)
     {
-        throw new NotSupportedException('"findIdentityByAccessToken" is not implemented.');
+        return static::findOne(['access_token' => $token, 'status' => self::STATUS_ACTIVE]);
     }
 
     /**
@@ -115,7 +117,8 @@ class User extends ActiveRecord implements IdentityInterface
      * @param string $token verify email token
      * @return static|null
      */
-    public static function findByVerificationToken($token) {
+    public static function findByVerificationToken($token)
+    {
         return static::findOne([
             'verification_token' => $token,
             'status' => self::STATUS_INACTIVE
@@ -192,6 +195,13 @@ class User extends ActiveRecord implements IdentityInterface
         $this->auth_key = Yii::$app->security->generateRandomString();
     }
 
+    /**
+     * Generates access_token 
+     */
+    public function generateAccessToken()
+    {
+        $this->access_token = Yii::$app->security->generateRandomString();
+    }
     /**
      * Generates new password reset token
      */
